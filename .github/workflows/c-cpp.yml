@@ -1,0 +1,77 @@
+name: Build packages
+
+on:
+  push:
+    paths-ignore:
+      - 'README.md'
+      - 'resources'
+      - 'testing'
+
+    branches:
+      - master
+      - actions
+
+jobs:
+  ubuntu:
+
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout gbcc-debian-tools repo
+        uses: actions/checkout@v2
+        with:
+          repository: philj56/gbcc-debian-tools
+
+      - name: Checkout main repo
+        uses: actions/checkout@v2
+        with:
+          path: gbcc
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install llvm clang devscripts debhelper meson scdoc \
+          libsdl2-dev libpng-dev libepoxy-dev libopenal-dev libgtk-3-dev
+
+      - name: Set clang as default compiler
+        run: sudo update-alternatives --set cc $(which clang)
+
+      - name: Build package
+        run: ./gendeb.sh
+
+      - name: Upload package
+        uses: actions/upload-artifact@v1
+        with:
+          name: gbcc-debian
+          path: gbcc-debian
+
+  windows:
+
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: "MINGW64"
+          update: true
+
+      - name: Checkout main repo
+        uses: actions/checkout@v2
+
+      - name: Build package
+        run: |
+          cd windows
+          ./msys2.sh --install-deps
+          mkdir ../package
+          mv dist ../package/gbcc
+
+      - name: Upload package
+        uses: actions/upload-artifact@v1
+        with:
+          name: gbcc-windows
+          path: package
